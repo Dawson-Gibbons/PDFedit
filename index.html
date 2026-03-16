@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Edit</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <h1>PDF Edit</h1>
+    </header>
+
+    <main class="app-main">
+      <!-- Phase 1: Upload -->
+      <section id="upload-phase" class="phase">
+        <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Upload PDF files">
+          <div class="drop-zone-content">
+            <svg class="drop-zone-icon" viewBox="0 0 64 64" width="64" height="64" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="16" y="8" width="32" height="48" rx="2"/>
+              <text x="32" y="40" text-anchor="middle" font-size="12" fill="currentColor" stroke="none">PDF</text>
+            </svg>
+            <p class="drop-zone-text">Drag & drop PDF files here, or click to browse</p>
+            <p class="drop-zone-hint">Up to 10 PDFs / ~100 pages recommended</p>
+          </div>
+          <input type="file" id="file-input" accept=".pdf,application/pdf" multiple hidden>
+        </div>
+      </section>
+
+      <!-- Phase 2: Progress -->
+      <section id="progress-phase" class="phase hidden">
+        <div id="file-progress-list" class="file-progress-list"></div>
+        <div class="overall-progress">
+          <p id="overall-progress-label" class="progress-label">Processing 0 of 0 files...</p>
+          <div class="progress-bar-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="overall-progress-bar">
+            <div class="progress-bar-fill" id="overall-progress-fill"></div>
+          </div>
+        </div>
+        <button id="continue-btn" class="btn btn-primary hidden">Continue with successful files</button>
+        <button id="add-more-progress-btn" class="btn btn-secondary hidden">+ Add more PDFs</button>
+      </section>
+
+      <!-- Phase 3: Organize -->
+      <section id="organize-phase" class="phase hidden">
+        <div class="mode-selector" role="radiogroup" aria-label="Organization mode">
+          <button id="mode-page" class="mode-btn active" role="radio" aria-checked="true">
+            <strong>Arrange Individual Pages</strong>
+            <span>Drag and drop individual pages from all your PDFs into any order.</span>
+          </button>
+          <button id="mode-block" class="mode-btn" role="radio" aria-checked="false">
+            <strong>Arrange Whole PDFs</strong>
+            <span>Drag and drop entire PDFs to set their order. Pages within each PDF stay in their original sequence.</span>
+          </button>
+        </div>
+
+        <button id="add-more-btn" class="btn btn-secondary add-more-btn">+ Add more PDFs</button>
+        <input type="file" id="add-more-input" accept=".pdf,application/pdf" multiple hidden>
+
+        <!-- Page-by-Page workspace -->
+        <div id="page-workspace" class="workspace">
+          <div id="page-grid" class="page-grid"></div>
+        </div>
+
+        <!-- Block workspace -->
+        <div id="block-workspace" class="workspace hidden">
+          <div id="block-list" class="block-list"></div>
+        </div>
+
+        <!-- Removed pages tray -->
+        <div id="removed-tray" class="removed-tray hidden">
+          <h3>Removed Pages</h3>
+          <div id="removed-grid" class="removed-grid"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Export footer -->
+    <footer id="export-footer" class="export-footer hidden">
+      <div class="export-footer-inner">
+        <div class="filename-group">
+          <input type="text" id="filename-input" class="filename-input" placeholder="Enter filename...">
+          <span class="filename-suffix">.pdf</span>
+        </div>
+        <button id="export-btn" class="btn btn-primary export-btn" disabled>Export PDF</button>
+      </div>
+      <p id="export-error" class="export-error hidden"></p>
+    </footer>
+
+    <!-- Markup Modal -->
+    <div id="markup-modal" class="markup-modal hidden" role="dialog" aria-label="Page markup" aria-modal="true">
+      <div class="markup-modal-inner">
+        <div class="markup-header">
+          <button id="markup-close" class="markup-close" aria-label="Close markup view">&times; Close</button>
+          <span id="markup-page-indicator" class="markup-page-indicator">Page 1 of 1</span>
+        </div>
+        <div class="markup-body">
+          <div class="markup-toolbar" role="toolbar" aria-label="Annotation tools">
+            <button class="tool-btn" data-tool="highlight" aria-label="Highlighter" aria-pressed="false" title="Highlighter">
+              <svg viewBox="0 0 24 24" width="24" height="24"><rect x="3" y="14" width="18" height="6" rx="1" fill="#FFEB3B" opacity="0.6"/><path d="M6 14V6l6-3 6 3v8" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="underline" aria-label="Underline" aria-pressed="false" title="Underline">
+              <svg viewBox="0 0 24 24" width="24" height="24"><text x="12" y="16" text-anchor="middle" font-size="16" fill="currentColor">U</text><line x1="4" y1="20" x2="20" y2="20" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="strikethrough" aria-label="Strikethrough" aria-pressed="false" title="Strikethrough">
+              <svg viewBox="0 0 24 24" width="24" height="24"><text x="12" y="16" text-anchor="middle" font-size="16" fill="currentColor">S</text><line x1="4" y1="13" x2="20" y2="13" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="eraser" aria-label="Eraser" aria-pressed="false" title="Eraser">
+              <svg viewBox="0 0 24 24" width="24" height="24"><path d="M20 20H7l-3-3 9-9 7 7-3 3" stroke="currentColor" fill="none" stroke-width="1.5"/><line x1="4" y1="20" x2="20" y2="20" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+            <div class="tool-separator"></div>
+            <div class="color-picker" aria-label="Annotation color">
+              <button class="color-swatch active" data-color="#FFEB3B" style="background:#FFEB3B" aria-label="Yellow" title="Yellow"></button>
+              <button class="color-swatch" data-color="#2563EB" style="background:#2563EB" aria-label="Blue" title="Blue"></button>
+              <button class="color-swatch" data-color="#EF4444" style="background:#EF4444" aria-label="Red" title="Red"></button>
+              <button class="color-swatch" data-color="#22C55E" style="background:#22C55E" aria-label="Green" title="Green"></button>
+              <button class="color-swatch" data-color="#F97316" style="background:#F97316" aria-label="Orange" title="Orange"></button>
+              <button class="color-swatch" data-color="#111827" style="background:#111827" aria-label="Black" title="Black"></button>
+            </div>
+            <div class="tool-separator"></div>
+            <button class="tool-btn" data-tool="undo" aria-label="Undo" title="Undo">
+              <svg viewBox="0 0 24 24" width="24" height="24"><path d="M4 10l5-5v3h6a5 5 0 010 10H9" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="redo" aria-label="Redo" title="Redo">
+              <svg viewBox="0 0 24 24" width="24" height="24"><path d="M20 10l-5-5v3H9a5 5 0 000 10h6" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+            </button>
+          </div>
+          <div class="markup-canvas-container">
+            <canvas id="markup-pdf-canvas" class="markup-pdf-canvas"></canvas>
+            <canvas id="markup-annotation-canvas" class="markup-annotation-canvas"></canvas>
+          </div>
+        </div>
+        <div class="markup-nav">
+          <button id="markup-prev" class="btn btn-secondary" aria-label="Previous page">&#9664; Prev</button>
+          <button id="markup-next" class="btn btn-secondary" aria-label="Next page">Next &#9654;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container" class="toast-container"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
